@@ -22,6 +22,9 @@ public class PatientController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private UserController userController;
+
     @GetMapping
     public List<PatientEntity> getAllPatient(){
         List<PatientEntity> result = repository.findAll();
@@ -49,22 +52,18 @@ public class PatientController {
 
     @PostMapping
     public ResponseEntity<String> registerPatient(@RequestBody PatientEntity patient) {
-        String userId = patient.getUser().getId();
+        ResponseEntity<String> userResponse = userController.registerUser(patient.getUser());
 
-        if (userId == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("ID do usuário não encontrado ou inválido.");
+        if (userResponse.getStatusCode() == HttpStatus.CREATED) {
+            UserEntity user = patient.getUser();
+
+            patient.setUser(user);
+            repository.save(patient);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body("Paciente cadastrado com sucesso!");
+        } else {
+            return userResponse;
         }
-
-        UserEntity user = userRepository.findById(userId).orElse(null);
-
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Usuário não encontrado.");
-        }
-
-        patient.setUser(user);
-        repository.save(patient);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body("Paciente cadastrado!");
     }
 
     @PutMapping
